@@ -1,6 +1,5 @@
-# Project place file
-/healthmanager.rbxlx
-
-# Roblox Studio lock files
-/*.rbxlx.lock
-/*.rbxl.lock
+/target
+/Packages
+/test
+sourcemap.json
+**/*.lock
