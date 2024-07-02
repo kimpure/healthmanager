@@ -1,0 +1,26 @@
+{
+  "name": "healthmanager",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Package": {
+        "$path": "Package"
+      }
+    },
+
+    "ServerScriptService": {
+      "healthmanager": {
+        "$path": "src"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterCharacterScripts": {
+        "Health": {
+          "$className": "Script"
+        }
+      }
+    }
+  }
+}
