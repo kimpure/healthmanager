@@ -13,14 +13,6 @@
       "healthmanager": {
         "$path": "src"
       }
-    },
-
-    "StarterPlayer": {
-      "StarterCharacterScripts": {
-        "Health": {
-          "$className": "Script"
-        }
-      }
     }
   }
 }
