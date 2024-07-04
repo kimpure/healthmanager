@@ -74,7 +74,8 @@ end
 --// Type
 export type healthmanager = {
     init: (player:Player)->();
-    add:(player:Player , EventName:string , Pras:{any})->();
+    add: (player:Player , EventName:string , Pras:{any})->();
+    getHealthEventList:(player:Player)->()
 }
 type run = (player:Player)->();
 
@@ -142,6 +143,7 @@ function run(player)
                 return
             end
         else
+            PlayerHealthDatas[player.Name].Event.Running = false
             return
         end
     end
@@ -157,7 +159,10 @@ function healthmanager.add(player , EventName , Pras)
     run(player)
 end
 
-
+--// Functions
+function healthmanager.getHealthEventList(player)
+    return PlayerHealthDatas[player.Name].Event.EventList
+end
 
 
 return healthmanager
