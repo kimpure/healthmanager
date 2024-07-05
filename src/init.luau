@@ -1,5 +1,6 @@
+--!strict
+
 --// Path
-local Players = game:GetService("Players")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 
@@ -26,10 +27,8 @@ local case = {
 type PlayerHealthDatas = {
     Evnet : {
         EventList: {
-            {
-                EventName: string;
-                Pras: {any}
-            }
+            EventName: string;
+            Pras: {any}
         };
         Running: boolean;
     };
@@ -61,6 +60,13 @@ function chnageTheHealth(player:Player)
 end
 
 
+--// Functions Type
+
+type Funtions = {
+    takeDamege: (player:Player , Value:number)->()
+}
+
+
 --// ModuleFunctions
 local Functions = {}
 
@@ -69,12 +75,12 @@ function Functions.takeDamege(player , Value)
     chnageTheHealth(player)
 end
 
-
-
 --// Type
+type addEventName = "takeDamege"
+
 export type healthmanager = {
     init: (player:Player)->();
-    add: (player:Player , EventName:string , Pras:{any})->();
+    add: (player:Player , EventName:addEventName , Pras:{any})->();
     getHealthEventList:(player:Player)->()
 }
 type run = (player:Player)->();
@@ -127,7 +133,7 @@ function healthmanager.init(player)
 end
 
 --// Running 
-function run(player)
+local run : run = function(player) 
     if PlayerHealthDatas[player.Name].Event.Running then
         return
     else
@@ -139,6 +145,7 @@ function run(player)
         if this then
             if typeof(Functions[this.EventName]) == "function" then
                 Functions[this.EventName](table.unpack(this.Pras))
+                PlayerHealthDatas[player.Name].Event.EventList[i] = nil
             else
                 return
             end
