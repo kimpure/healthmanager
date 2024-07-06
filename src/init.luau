@@ -1,15 +1,14 @@
 --!strict
 
---// Path
+--// Service
 local StarterPlayer = game:GetService("StarterPlayer")
 
-
---// Auto Init
+--// ServerInit 
 Instance.new('Script' , StarterPlayer.StarterCharacterScripts).Name = 'Health'
 
 --// Setting
 local Setting = {
-    baseHealth = 100;
+    BaseHealth = 100;
     AutoRecovery = {
         AutoRecoveryTime = 3;
         AutoRecoveryValue = 1;
@@ -22,25 +21,24 @@ local case = {
     Bleeding = false; 
 }
 
-
---// Types
-type PlayerHealthDatas = {
-    Evnet : {
-        EventList: {
-            EventName: string;
-            Pras: {any}
+--// Datas
+type Datas = {
+    [string]: {
+        Event: {
+            [number]: {
+                Event: any;
+                Pras: {any};
+            }
         };
-        Running: boolean;
-    };
-    Health: number
+        Health: number;
+        Running: boolean
+    }
 }
+local Datas = {} :: Datas
 
---// PlayerData
-local PlayerHealthDatas = {} :: PlayerHealthDatas
-
---// Data Functcions
+--// Funtions
 function changeHealthVible(player:Player , Value:number)
-    PlayerHealthDatas[player.Name].Health = Value
+    Datas[player.Name].Health = Value
 end
 
 function chnageTheHealth(player:Player)
@@ -48,7 +46,7 @@ function chnageTheHealth(player:Player)
     local Humanoid = Character:FindFirstChildOfClass'Humanoid'
     local function this_main()
         if Humanoid then
-            Humanoid.Health = PlayerHealthDatas[player.Name].Health
+            Humanoid.Health = Datas[player.Name].Health
         else
             wait()
             Humanoid = Character:FindFirstChildOfClass'Humanoid'
@@ -60,43 +58,36 @@ function chnageTheHealth(player:Player)
 end
 
 
---// Functions Type
+function Run(player:Player)
+    for i=1 , math.huge do
+        local _this = Datas[player.Name]
+        if _this.Running then
+            return
+        else
+            Datas[player.Name].Running = true
+        end
 
-type Funtions = {
-    takeDamege: (player:Player , Value:number)->()
-}
-
-
---// ModuleFunctions
-local Functions = {}
-
-function Functions.takeDamege(player , Value)
-    changeHealthVible(player , PlayerHealthDatas[player.Name].Health - Value)
-    chnageTheHealth(player)
+        if _this.Event[i] then
+            if typeof(_this.Event[i].Event) == "function" then
+                _this.Event[i].Event( table.unpack( _this.Event[i].Pras ) )
+                Datas[player.Name].Event[i] = nil
+            end
+        else
+            return
+        end
+    end
 end
 
---// Type
-type addEventName = "takeDamege"
-
-export type healthmanager = {
-    init: (player:Player)->();
-    add: (player:Player , EventName:addEventName , Pras:{any})->();
-    getHealthEventList:(player:Player)->()
-}
-type run = (player:Player)->();
-
-local healthmanager = {} :: healthmanager
+--// module
+local healthmanager = {}
 
 --// Init
-function healthmanager.init(player)
-    PlayerHealthDatas[player.Name] = {
-        Event = {
-            EventList = {};
-            Running = false;
-        };
-        Health = Setting.baseHealth;
+function healthmanager:Init(player:Player)
+    Datas[player.Name] = {
+        Event = {};
+        Health = Setting.BaseHealth;
+        Running = false;
     }
-
 
     local Character = player.Character or player.CharacterAdded:Wait() :: Model
     local Humanoid = Character:FindFirstChildOfClass'Humanoid'
@@ -104,7 +95,7 @@ function healthmanager.init(player)
     local function this_main()
         if Humanoid then
             Humanoid:GetPropertyChangedSignal('Health'):Connect(function()
-                if Humanoid.Health ~= PlayerHealthDatas[player.Name].Health then
+                if Humanoid.Health ~= Datas[player.Name].Health then
                     chnageTheHealth(player)
                 end
             end)
@@ -120,11 +111,11 @@ function healthmanager.init(player)
     task.spawn(function()
         while task.wait(Setting.AutoRecovery.AutoRecoveryTime) do
             if case.AutoRecovery then
-                local this_Health = PlayerHealthDatas[player.Name].Health
-                if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.baseHealth then
+                local this_Health = Datas[player.Name].Health
+                if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.BaseHealth then
                     changeHealthVible(player, this_Health + Setting.AutoRecovery.AutoRecoveryValue)
                 else
-                    changeHealthVible(player, Setting.baseHealth)
+                    changeHealthVible(player, Setting.BaseHealth)
                 end
                 chnageTheHealth(player)
             end
@@ -132,43 +123,16 @@ function healthmanager.init(player)
     end)
 end
 
---// Running 
-local run : run = function(player) 
-    if PlayerHealthDatas[player.Name].Event.Running then
-        return
-    else
-        PlayerHealthDatas[player.Name].Event.Running = true
-    end
-
-    for i=1 , math.huge do
-        local this = PlayerHealthDatas[player.Name].Event.EventList[i]
-        if this then
-            if typeof(Functions[this.EventName]) == "function" then
-                Functions[this.EventName](table.unpack(this.Pras))
-                PlayerHealthDatas[player.Name].Event.EventList[i] = nil
-            else
-                return
-            end
-        else
-            PlayerHealthDatas[player.Name].Event.Running = false
-            return
-        end
-    end
-end
-
---// Add 
-function healthmanager.add(player , EventName , Pras)
-    PlayerHealthDatas[player.Name].Event.EventList[#PlayerHealthDatas[player.Name].Event.EventList+1] = {
-        EventName=EventName;
-        Pras=Pras;
+function healthmanager:TakeDamege(player:Player , Damege:number)
+    Datas[player.Name].Event[#Datas[player.Name].Event+1] = {
+        Event = function(player:Player , Damege:number)
+            changeHealthVible(player , Datas[player.Name].Health - Damege)
+            chnageTheHealth(player)
+        end;
+        Pras = {player , Damege};
     }
 
-    run(player)
-end
-
---// Functions
-function healthmanager.getHealthEventList(player)
-    return PlayerHealthDatas[player.Name].Event.EventList
+    Run(player)
 end
 
 

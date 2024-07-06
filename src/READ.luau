@@ -1,25 +1,46 @@
 --!strict
 
-local Players = game:GetService("Players")
+--// Path
 local StarterPlayer = game:GetService("StarterPlayer")
 
-local Settings = {
-    BaseHealth = 100;
+
+--// Auto Init
+Instance.new('Script' , StarterPlayer.StarterCharacterScripts).Name = 'Health'
+
+--// Setting
+local Setting = {
+    baseHealth = 100;
     AutoRecovery = {
         AutoRecoveryTime = 3;
         AutoRecoveryValue = 1;
     };
 }
 
+--// Cases
 local case = {
     AutoRecovery = true;
     Bleeding = false; 
 }
 
-local PlayerHealths = {}
 
+--// Types
+type PlayerHealthDatas = {
+    Evnet : {
+        EventList: {
+            Event: <T>(...T)->();
+            Pras: {any};
+        };
+        Running: boolean;
+    };
+    Health: number
+}
+
+--// PlayerData
+local PlayerHealthDatas = {} :: PlayerHealthDatas
+
+--// Data Functcions
 function changeHealthVible(player:Player , Value:number)
-    PlayerHealths[player.Name] = Value
+    PlayerHealthDatas[player.Name].Health = Value
 end
 
 function chnageTheHealth(player:Player)
@@ -27,7 +48,7 @@ function chnageTheHealth(player:Player)
     local Humanoid = Character:FindFirstChildOfClass'Humanoid'
     local function this_main()
         if Humanoid then
-            Humanoid.Health = PlayerHealths[player.Name]
+            Humanoid.Health = PlayerHealthDatas[player.Name].Health
         else
             wait()
             Humanoid = Character:FindFirstChildOfClass'Humanoid'
@@ -38,185 +59,114 @@ function chnageTheHealth(player:Player)
     this_main()
 end
 
---// type
 
-type healthmanager = {
-    takeDamege: (player:Player , Value:number)->(),
-    bleeding: (player:Player , BleedingCount:number , BleedingTickTime:number , BleedingTickDamege:number , Remainingtime:number)->(),
-    run: (player:Player)->(),
-    add: (player:Player , EventName:string , Pras: {any})->(),
+--// Functions Type
+
+type Funtions = {
+    takeDamege: (player:Player , Value:number)->()
 }
 
-export type main = {
-    run: (player:Player)->(),
-    add: (player:Player , EventName:{bleeding:string} , Pras: {any})->(),
-    Init: (player:Player)->(),
+
+--// ModuleFunctions
+local Functions = {}
+
+function Functions.takeDamege(player , Value)
+    changeHealthVible(player , PlayerHealthDatas[player.Name].Health - Value)
+    chnageTheHealth(player)
+end
+
+--// Type
+type addEventName = "takeDamege"
+
+export type healthmanager = {
+    init: (player:Player)->();
+    add: (player:Player , EventName:addEventName , Pras:{any})->();
+    getHealthEventList:(player:Player)->()
 }
-
-local healthFunctions = {} :: healthmanager
---// 기능들
-
-
---// TakeDamege
-function healthFunctions.takeDamege(player , Value)
-    if PlayerHealths[player.Name] then
-        changeHealthVible(player , PlayerHealths[player.Name] - Value)
-        chnageTheHealth(player)
-    else
-        while task.wait() do
-            if PlayerHealths[player.Name] then
-                healthFunctions.takeDamege(player , Value)
-                break
-            end
-        end
-    end
-end
-
---// $ running
-function healthFunctions.bleeding(player , BleedingCount , BleedingTickTime , BleedingTickDamege , Remainingtime)
-    case.AutoRecovery = false;
-    case.Bleeding = true;
-    
-    for _=1 , BleedingCount do
-        healthFunctions.takeDamege(player , BleedingTickDamege)
-        task.wait(BleedingTickTime)
-    end
-    
-    task.wait(Remainingtime)
-    
-    case.AutoRecovery = true;
-    case.Bleeding = false; 
-end
-
+type run = (player:Player)->();
 
 local healthmanager = {} :: healthmanager
 
 --// Init
+function healthmanager.init(player)
+    PlayerHealthDatas[player.Name] = {
+        Event = {
+            EventList = {};
+            Running = false;
+        };
+        Health = Setting.baseHealth;
+    }
 
-Instance.new('Script' , StarterPlayer.StarterCharacterScripts).Name = 'Health'
 
---//
+    local Character = player.Character or player.CharacterAdded:Wait() :: Model
+    local Humanoid = Character:FindFirstChildOfClass'Humanoid'
+                
+    local function this_main()
+        if Humanoid then
+            Humanoid:GetPropertyChangedSignal('Health'):Connect(function()
+                if Humanoid.Health ~= PlayerHealthDatas[player.Name].Health then
+                    chnageTheHealth(player)
+                end
+            end)
+        else
+            task.wait()
+            Humanoid = Character:FindFirstChildOfClass'Humanoid'
+            this_main()
+        end
+    end
+                
+    this_main()
+    
+    task.spawn(function()
+        while task.wait(Setting.AutoRecovery.AutoRecoveryTime) do
+            if case.AutoRecovery then
+                local this_Health = PlayerHealthDatas[player.Name].Health
+                if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.baseHealth then
+                    changeHealthVible(player, this_Health + Setting.AutoRecovery.AutoRecoveryValue)
+                else
+                    changeHealthVible(player, Setting.baseHealth)
+                end
+                chnageTheHealth(player)
+            end
+        end
+    end)
+end
 
---// queue Types
-
-type EventList = {
-    EventName: string;
-    Pras: {any};
-}
-
-type Player_HelthQueue = {
-    EventList:{EventList};
-    Running:boolean;
-}
-
---// queue
-local healthQueue = {
-    -- studiopure = {
-    --     EventList = {
-    --         {
-    --             EventName = '';
-    --             Pras = {};
-    --         };
-    --     };
-    --     Running = false;
-    -- }
-}
-
---// $ running
-function healthmanager.run(player)
-    print('a')
-    local healthQueue = healthQueue[player.Name] :: Player_HelthQueue
-    if not healthQueue[player.Name].Running then
+--// Running 
+local run : run = function(player) 
+    if PlayerHealthDatas[player.Name].Event.Running then
         return
     else
-        healthQueue[player.Name].Running = true
+        PlayerHealthDatas[player.Name].Event.Running = true
     end
 
     for i=1 , math.huge do
-        local v = healthQueue.EventList[i]
-
-        if v then
-            local this = {
-                EventName = v.EventName;
-                Pras = v.Pras;
-            }
-
-
-            this.Event = healthFunctions[this.EventName]
-
-            if typeof(this.Event) == 'function' then
-                --// Running Queue List for function 
-                this.Event( table.unpack( this.Pras ) )
+        local this = PlayerHealthDatas[player.Name].Event.EventList[i].Event
+        if this then
+            if typeof(this) == 'function' then
+                this()
             end
         else
-            healthQueue[player.Name].Running = false
+            PlayerHealthDatas[player.Name].Event.Running = false
             return
         end
     end
 end
 
---// $ add
+--// Add 
 function healthmanager.add(player , EventName , Pras)
-    if typeof(EventName) ~= 'string' or typeof(Pras) ~= 'table' then  
-        error('type error')
-    end
+    -- PlayerHealthDatas[player.Name].Event.EventList[#PlayerHealthDatas[player.Name].Event.EventList+1] = {
+    --     EventName=EventName;
+    --     Pras=Pras;
+    -- }
 
-    if typeof(healthFunctions[EventName]) then
-        if player.Character or typeof(healthQueue[ player.Name ]) == 'table' then
-            healthQueue[ player.Name ].EventList[ #healthQueue[ player.Name ].EventList+1 ] = {
-                EventName = EventName;
-                Pras = Pras; 
-            }
-            healthmanager.run(player)
-            print'a'
-        else
-            task.wait()
-            healthmanager.add(player , EventName , Pras)
-        end
-    end
+    -- run(player)
 end
 
---// Init
--- Players.PlayerAdded:Connect(function(player:Player)
-    
--- end)
-
-function healthmanager.Init(player:Player)
-    PlayerHealths[player.Name] = Settings.BaseHealth
-    healthQueue[player.Name] = {
-        EventList = {}
-    }
-    
-        local Character = player.Character or player.CharacterAdded:Wait() :: Model
-        local Humanoid = Character:FindFirstChildOfClass'Humanoid'
-                    
-        local function this_main()
-            if Humanoid then
-                Humanoid:GetPropertyChangedSignal('Health'):Connect(function()
-                    if Humanoid.Health ~=  PlayerHealths[player.Name] then
-                        chnageTheHealth(player)
-                    end
-                end)
-            else
-                task.wait()
-                Humanoid = Character:FindFirstChildOfClass'Humanoid'
-                this_main()
-            end
-        end
-                    
-        this_main()
-                    
-        while task.wait(Settings.AutoRecovery.AutoRecoveryTime) do
-            if case.AutoRecovery then
-                local this_Health = PlayerHealths[player.Name]
-                if this_Health + Settings.AutoRecovery.AutoRecoveryValue <= Settings.BaseHealth then
-                    changeHealthVible(player, this_Health + Settings.AutoRecovery.AutoRecoveryValue)
-                else
-                    changeHealthVible(player, Settings.BaseHealth)
-                end
-                chnageTheHealth(player)
-            end
-        end
+--// Functions
+function healthmanager.getHealthEventList(player)
+    return PlayerHealthDatas[player.Name].Event.EventList
 end
+
 
 return healthmanager
