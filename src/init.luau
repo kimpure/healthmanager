@@ -59,14 +59,15 @@ end
 
 
 function Run(player:Player)
-    for i=1 , math.huge do
-        local _this = Datas[player.Name]
-        if _this.Running then
-            return
-        else
-            Datas[player.Name].Running = true
-        end
+    local _this = Datas[player.Name]
+    
+    if _this.Running then
+        return
+    else
+        Datas[player.Name].Running = true
+    end
 
+    for i=1 , math.huge do
         if _this.Event[i] then
             if typeof(_this.Event[i].Event) == "function" then
                 _this.Event[i].Event( table.unpack( _this.Event[i].Pras ) )
