@@ -60,13 +60,11 @@ end
 
 function Run(player:Player)
     local _this = Datas[player.Name]
-    
     if _this.Running then
         return
     else
         Datas[player.Name].Running = true
     end
-
     for i=1 , math.huge do
         if _this.Event[i] then
             if typeof(_this.Event[i].Event) == "function" then
@@ -95,6 +93,7 @@ function healthmanager:Init(player:Player)
                 
     local function this_main()
         if Humanoid then
+            Humanoid.MaxHealth = Setting.BaseHealth
             Humanoid:GetPropertyChangedSignal('Health'):Connect(function()
                 if Humanoid.Health ~= Datas[player.Name].Health then
                     chnageTheHealth(player)
@@ -125,6 +124,7 @@ function healthmanager:Init(player:Player)
 end
 
 function healthmanager:TakeDamege(player:Player , Damege:number)
+    assert(type(Damege) == 'number' , 'Damege is not number')
     Datas[player.Name].Event[#Datas[player.Name].Event+1] = {
         Event = function(player:Player , Damege:number)
             changeHealthVible(player , Datas[player.Name].Health - Damege)
