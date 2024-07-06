@@ -1,18 +1,11 @@
 
 how to use?
 ```lua
+local Players = game:GetService("Players")
 local a = require(script.Parent)
-game.Players.PlayerAdded:Connect(function(plr)
-	a.init(plr)
-	a.add(plr , 'takeDamege' , {plr , 10})
-	a.add(plr , 'takeDamege' , {plr , 10})	
-	a.add(plr , 'takeDamege' , {plr , 10})	
-	a.add(plr , 'takeDamege' , {plr , 10})	
-	a.add(plr , 'takeDamege' , {plr , 10})
-	print(a.getHealthEventList(plr))
-	a.add(plr , 'takeDamege' , {plr , 10})	
-	a.add(plr , 'takeDamege' , {plr , 10})	
-	a.add(plr , 'takeDamege' , {plr , 10})	
-	a.add(plr , 'takeDamege' , {plr , 10})
+
+Players.PlayerAdded:Connect(function(player)
+    a:Init(player)
+    a:TakeDamege(player , player)
 end)
 ```
