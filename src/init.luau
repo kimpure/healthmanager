@@ -37,6 +37,9 @@ type Datas = {
             TraumaHealth: number;
             Health: number;
         };
+        Recovery: {
+            loop: thread?;
+        }
     };
 }
 local Datas = {} :: Datas
@@ -90,7 +93,9 @@ function healthmanager:Init(player:Player)
             TraumaHealth = Setting.Health.BaseTraumaHealth;
             Health = Setting.Health.MaxHealth;
         };
-        Running = false;
+        Recovery = {
+            loop = nil;
+        }
     }
 
     local Character = player.Character or player.CharacterAdded:Wait() :: Model
@@ -112,9 +117,6 @@ function healthmanager:Init(player:Player)
     end
                 
     this_main()
-
-    local loop
-
     local function Recovery()
         if case.AutoRecovery then
             local this_Health = Datas[player.Name].Health.Health
@@ -126,10 +128,10 @@ function healthmanager:Init(player:Player)
             chnageTheHealth(player)
         end
 
-        loop = task.delay(Setting.AutoRecovery.AutoRecoveryTime , Recovery)
+        Datas[player.Name].Recovery.loop = task.delay(Setting.AutoRecovery.AutoRecoveryTime , Recovery)
     end
 
-    loop = task.defer(Recovery)
+    Datas[player.Name].Recovery.loop = task.defer(Recovery)
 end
 
 function healthmanager:TakeDamege(player:Player , Damege:number)
