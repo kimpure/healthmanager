@@ -21,7 +21,6 @@ local Setting = {
 --// Cases
 local case = {
     AutoRecovery = true;
-    Bleeding = false; 
 }
 
 --// Datas
@@ -54,7 +53,7 @@ function chnageTheHealth(player:Player)
         if Humanoid then
             Humanoid.Health = Datas[player.Name].Health.Health
         else
-            wait()
+            task.wait()
             Humanoid = Character:FindFirstChildOfClass'Humanoid'
             this_main()
         end
@@ -113,20 +112,24 @@ function healthmanager:Init(player:Player)
     end
                 
     this_main()
-    
-    task.spawn(function()
-        while task.wait(Setting.AutoRecovery.AutoRecoveryTime) do
-            if case.AutoRecovery then
-                local this_Health = Datas[player.Name].Health.Health
-                if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth then
-                    changeHealthVible(player, this_Health + Setting.AutoRecovery.AutoRecoveryValue)
-                else
-                    changeHealthVible(player, Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth)
-                end
-                chnageTheHealth(player)
+
+    local loop
+
+    local function Recovery()
+        if case.AutoRecovery then
+            local this_Health = Datas[player.Name].Health.Health
+            if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth then
+                changeHealthVible(player, this_Health + Setting.AutoRecovery.AutoRecoveryValue)
+            else
+                changeHealthVible(player, Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth)
             end
+            chnageTheHealth(player)
         end
-    end)
+
+        loop = task.delay(Setting.AutoRecovery.AutoRecoveryTime , Recovery)
+    end
+
+    loop = task.defer(Recovery)
 end
 
 function healthmanager:TakeDamege(player:Player , Damege:number)
