@@ -1,12 +1,17 @@
 --!strict
 
 local Players = game:GetService("Players")
-local a = require(script.Parent)
+local HealthManager = require(script.Parent)
 
 Players.PlayerAdded:Connect(function(player)
-    a:Init(player)
-    a:TakeDamege(player , 33)
-    a:TakeTraumaDamege(player , 70)
-    a:GetHealth(player , 'TraumaHealth')
-    print(a:GetHealth(player , 'Health'))
+    local NewManager = HealthManager.new(player)
+    while wait(.1) do
+        NewManager:takeDamege(math.random(1,2))
+        print(NewManager) -- Table
+        print(NewManager.player) -- Player
+        print(NewManager.Health) -- Table
+        print(NewManager.Health.Health) -- number
+        print(NewManager.Health.MaxHealth) -- number
+        print(NewManager.Health.TraumaHealth) -- number
+    end
 end)

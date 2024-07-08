@@ -14,11 +14,11 @@ local Setting = {
         BaseTraumaHealth = 0;
     };
     AutoRecovery = {
-        AutoRecoveryTime = 3;
+        AutoRecoveryTime = .1;
         AutoRecoveryValue = 1;
     };
 }
---// Cases
+--// Casesr
 local case = {
     AutoRecovery = true;
 }
@@ -32,11 +32,6 @@ type Datas = {
                 Pras: {any};
             }
         };
-        Health: {
-            MaxHealth: number;
-            TraumaHealth: number;
-            Health: number;
-        };
         Recovery: {
             loop: thread?;
         }
@@ -45,35 +40,18 @@ type Datas = {
 local Datas = {} :: Datas
 
 --// Funtions
-function changeHealthVible(player:Player , Value:number)
-    Datas[player.Name].Health.Health = Value
+function changeHealthVible(self , Value:number)
+    self.Health.Health = Value
 end
 
-function chnageTheHealth(player:Player)
-    local Character = player.Character or player.CharacterAdded:Wait() :: Model
-    local Humanoid = Character:FindFirstChildOfClass'Humanoid'
-    local function this_main()
-        if Humanoid then
-            Humanoid.Health = Datas[player.Name].Health.Health
-        else
-            task.wait()
-            Humanoid = Character:FindFirstChildOfClass'Humanoid'
-            this_main()
-        end
-    end
-
-    this_main()
-end
-
-
-function Run(player:Player)
-    local _this = Datas[player.Name]
+function Run(self)
+    local _this = Datas[self.player.Name]
 
     for i=1 , math.huge do
         if _this.Event[i] then
             if typeof(_this.Event[i].Event) == "function" then
                 _this.Event[i].Event( table.unpack( _this.Event[i].Pras ) )
-                Datas[player.Name].Event[i] = nil
+                Datas[self.player.Name].Event[i] = nil
             end
         else
             return
@@ -81,89 +59,116 @@ function Run(player:Player)
     end
 end
 
---// module
-local healthmanager = {}
+local Recovery = {}
+function Recovery.Init(self)
+    local function Recovery()
+        if case.AutoRecovery then
+            local this_Health = self.Health.Health :: number
+            if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - self.Health.TraumaHealth then
+                changeHealthVible(self , this_Health + Setting.AutoRecovery.AutoRecoveryValue)
+            else
+                changeHealthVible(self, Setting.Health.MaxHealth - self.Health.TraumaHealth)
+            end
+        end
 
---// Init
-function healthmanager:Init(player:Player)
+        Datas[self.player.Name].Recovery.loop = task.delay(Setting.AutoRecovery.AutoRecoveryTime , Recovery)
+    end
+
+    Datas[self.player.Name].Recovery.loop = task.defer(Recovery)
+end
+
+--// module
+
+
+
+--// Type
+
+type HealthManagerImpl = {
+	__index: HealthManagerImpl,
+	new: (player:Player) -> (any);
+    takeDamege: (self: HealthManager, Damege:number)->();
+    takeTraumaDamege: (self:HealthManager, TraumaDamege:number)->();
+}
+
+
+export type HealthManager = typeof(setmetatable({} :: {
+    player:Player;
+    Health: {
+        MaxHealth: number;
+        TraumaHealth: number;
+        Health: number;
+    };
+}, {} :: HealthManager))
+
+--//
+
+local healthmanager = {} :: HealthManagerImpl
+healthmanager.__index = healthmanager
+
+function healthmanager.new(player)
     Datas[player.Name] = {
         Event = {};
-        Health = {
-            MaxHealth = Setting.Health.MaxHealth;
-            TraumaHealth = Setting.Health.BaseTraumaHealth;
-            Health = Setting.Health.MaxHealth;
-        };
         Recovery = {
             loop = nil;
         }
     }
+    
+    --// MetaTable
+    local self = {
+        player=player;
+        Health =  {
+            MaxHealth =  Setting.Health.MaxHealth;
+            TraumaHealth = Setting.Health.BaseTraumaHealth;
+            Health = Setting.Health.MaxHealth;
+        };
+    }
+    
+    local _self = setmetatable(self , healthmanager)
 
-    local Character = player.Character or player.CharacterAdded:Wait() :: Model
-    local Humanoid = Character:FindFirstChildOfClass'Humanoid'
-                
-    local function this_main()
-        if Humanoid then
-            Humanoid.MaxHealth = Setting.Health.MaxHealth
-            Humanoid:GetPropertyChangedSignal('Health'):Connect(function()
-                if Humanoid.Health ~= Datas[player.Name].Health.Health then
-                    chnageTheHealth(player)
-                end
-            end)
-        else
-            task.wait()
-            Humanoid = Character:FindFirstChildOfClass'Humanoid'
-            this_main()
-        end
-    end
-                
-    this_main()
     local function Recovery()
         if case.AutoRecovery then
-            local this_Health = Datas[player.Name].Health.Health
-            if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth then
-                changeHealthVible(player, this_Health + Setting.AutoRecovery.AutoRecoveryValue)
+            local this_Health = _self.Health.Health :: number
+            if this_Health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - self.Health.TraumaHealth then
+                changeHealthVible(_self , this_Health + Setting.AutoRecovery.AutoRecoveryValue)
             else
-                changeHealthVible(player, Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth)
+                changeHealthVible(_self, Setting.Health.MaxHealth - self.Health.TraumaHealth)
             end
-            chnageTheHealth(player)
         end
 
-        Datas[player.Name].Recovery.loop = task.delay(Setting.AutoRecovery.AutoRecoveryTime , Recovery)
+        Datas[self.player.Name].Recovery.loop = task.delay(Setting.AutoRecovery.AutoRecoveryTime , Recovery)
     end
 
-    Datas[player.Name].Recovery.loop = task.defer(Recovery)
+    Datas[self.player.Name].Recovery.loop = task.defer(Recovery)
+    
+    return _self
 end
 
-function healthmanager:TakeDamege(player:Player , Damege:number)
+
+function healthmanager.takeDamege(self , Damege)
     assert(type(Damege) == 'number' , 'Damege is not number')
-    Datas[player.Name].Event[#Datas[player.Name].Event+1] = {
+    Datas[self.player.Name].Event[#Datas[self.player.Name].Event+1] = {
         Event = function(player:Player , Damege:number)
-            changeHealthVible(player , Datas[player.Name].Health.Health - Damege)
-            chnageTheHealth(player)
+            changeHealthVible(self , self.Health.Health::number - Damege)
         end;
-        Pras = {player , Damege};
+        Pras = {self.player , Damege};
     }
 
-    Run(player)
+    Run(self)
 end
 
-function healthmanager:TakeTraumaDamege(player:Player , TraumaDamege:number)
+function healthmanager.takeTraumaDamege(self , TraumaDamege)
     assert(type(TraumaDamege) == 'number' , 'Damege is not number')
-    Datas[player.Name].Event[#Datas[player.Name].Event+1] = {
+    Datas[self.player.Name].Event[#Datas[self.player.Name].Event+1] = {
         Event = function(player:Player , TraumaDamege:number)
-            Datas[player.Name].Health.TraumaHealth += TraumaDamege
-            if Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth <= Datas[player.Name].Health.Health then
-                changeHealthVible(player , Setting.Health.MaxHealth - Datas[player.Name].Health.TraumaHealth)
+            self.Health.TraumaHealth = self.Health.TraumaHealth::number + TraumaDamege
+            if Setting.Health.MaxHealth - self.Health.TraumaHealth <= self.Health.Health then
+                changeHealthVible(self , Setting.Health.MaxHealth - self.Health.TraumaHealth)
             end
         end;
-        Pras = {player , TraumaDamege};
+        Pras = {self.player , TraumaDamege};
     }
 
-    Run(player)
-end
-
-function healthmanager:GetHealth(player:Player , HealthType: 'TraumaHealth' | 'Health')
-    return Datas[player.Name].Health[HealthType]
+    Run(self)
 end
 
 return healthmanager
