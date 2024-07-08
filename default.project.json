@@ -5,7 +5,7 @@
 
     "ReplicatedStorage": {
       "Package": {
-        "$path": "Package"
+        "$path": "Packages"
       }
     },
 
