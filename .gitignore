@@ -2,3 +2,5 @@ Packages
 sourcemap.json
 **/*.lock
 READ
+.lune
+aftman.toml
