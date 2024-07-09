@@ -25,11 +25,11 @@ local Setting = {
     Health = {
         MaxHealth = 100;
         BaseTraumaDamage = 0;
-        BaseHealth = 10;
+        BaseHealth = 66;
     };
     AutoRecovery = {
         AutoRecoveryTime = .1;
-        AutoRecoveryValue = 0;
+        AutoRecoveryValue = 1;
     };
 }
 
@@ -91,7 +91,22 @@ local function _recovery(entity)
     world:set(entity , recovery , task.delay(Setting.AutoRecovery.AutoRecoveryTime , _recovery , entity))
 end
 
-local healthmanager = {}
+type healthmanagerImpl = {
+	__index: healthmanagerImpl,
+	new: ()->(healthmanager);
+    takeDamege: (self:healthmanager , damage:number)->();
+    takeTraumaDamege: (self:healthmanager , traumaDamege:number)->();
+}
+
+--// $Types
+export type healthmanager = typeof(setmetatable({} :: {
+	health: number;
+    maxHealth: number;
+    traumaDamage: number;
+    player: Player;
+}, {} :: healthmanagerImpl))
+
+local healthmanager = {} :: healthmanagerImpl
 healthmanager.__index = healthmanager
 --// $ main
 
@@ -128,26 +143,46 @@ function healthmanager.new()
     return self
 end
 
-function healthmanager.takeDamege(self , Damage)
-    local player = self.player :: number & {
-        __nominal_type_dont_use: any
-    };
-
-    local health = world:get(player , health) :: {
-        health: number;
-        maxHealth: number;
-        traumaDamage: number;
-    };
-
-
-    local function main(self , Damage)
+function healthmanager.takeDamege(self , damage)
+    local function main(self , damage)
         local player = self.player :: number & {
             __nominal_type_dont_use: any
         };
-        changeHealthVible(player , health.health - Damage)
+
+        local t = world:get(player , health) :: {
+            health: number;
+            maxHealth: number;
+            traumaDamage: number;
+        };
+
+        changeHealthVible(player , t.health - damage)
     end
 
-    run(self , main , {self , Damage})
+    run(self , main , {self , damage})
+end
+
+function healthmanager.takeTraumaDamege(self , traumaDamege)
+    local function main(self , traumaDamege)
+        local player = self.player :: number & {
+            __nominal_type_dont_use: any
+        };
+        
+        local t = world:get(player , health) :: {
+            health: number;
+            maxHealth: number;
+            traumaDamage: number;
+        };
+
+        t.traumaDamage += traumaDamege
+        
+        world:set(player , health , t)
+
+        if t.maxHealth - t.traumaDamage <= t.health then
+            changeHealthVible(self , t.maxHealth - t.traumaDamage)
+        end
+    end
+
+    run(self , main , {self , traumaDamege})
 end
 
 return healthmanager
