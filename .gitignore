@@ -1,2 +1,4 @@
-./Packages
-./sourcemap.json
+Packages
+sourcemap.json
+**/*.lock
+READ

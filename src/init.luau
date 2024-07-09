@@ -7,28 +7,20 @@ local RunService = game:GetService("RunService")
 --// import
 local jecs = require(ReplicatedStorage:WaitForChild('Package'):WaitForChild('jecs'))
 
-
 local world = jecs.World.new()
-local healths = world:component()
-local maxHealths = world:component()
-local traumaDamages = world:component()
-local human = world:component()
+local health = world:component()
 local recovery = world:component()
-local Events = world:component()
-local Running = world:component()
+local case = world:component()
+local RunningLists = {} :: {
+    [number]: {
+        [number]: {
+            Event: any;
+            Pras: {any};
+        };
+        Running: boolean;
+    };
+};
 
---// $ type
--- type HealthManagerImpl = {
--- 	__index: HealthManagerImpl,
--- 	new: (player:Player) -> (any);
--- }
-
--- export type HealthManager = typeof(setmetatable({} :: {
-
--- }, {} :: HealthManager))
-
-
---// $ Setting
 local Setting = {
     Health = {
         MaxHealth = 100;
@@ -37,101 +29,125 @@ local Setting = {
     };
     AutoRecovery = {
         AutoRecoveryTime = .1;
-        AutoRecoveryValue = 1;
+        AutoRecoveryValue = 0;
     };
 }
 
-local case = {
-    AutoRecovery = true;
-}
 
---// $ main
-local healthmanager = {}
-healthmanager.__index = healthmanager
+local function run(self , main, Pras: {any})
+    local player = self.player :: number & {
+        __nominal_type_dont_use: any
+    };
+
+    local t = {
+        Event = main;
+        Pras = Pras;
+    }
+
+    RunningLists[player][#RunningLists[player]+1] = t
+
+    if RunningLists[player].Running then
+        return
+    else
+        RunningLists[player].Running = true
+    end
+
+    for i=1 , math.huge do
+        if RunningLists[player][i] then
+            RunningLists[player][i].Event(table.unpack(RunningLists[player][i].Pras));
+            RunningLists[player][i] = nil
+        else
+            RunningLists[player].Running = false
+            return
+        end
+    end
+end
+
 
 local function changeHealthVible(entity , value:number)
-    world:set(entity , healths , value)
-
+    local t = world:get(entity , health)
+    t.health = value
+    world:set(entity , health , t) ;
     if value <= 0 then
-        world:set(entity , human , {dead=true})
+        print('죽었음')
     end
 end
 
 local function _recovery(entity)
-    if case.AutoRecovery then
-        if world:get(entity , healths)::number + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - world:get(entity , traumaDamages) then
+    if world:get(entity , case).AutoRecovery then
+        local t = world:get(entity , health) :: {
+            health:number;
+            maxHealth:number;
+            traumaDamage:number;
+        };
+        if t.health + Setting.AutoRecovery.AutoRecoveryValue <= Setting.Health.MaxHealth - t.traumaDamage then
             
-            changeHealthVible(entity , world:get(entity , healths) + Setting.AutoRecovery.AutoRecoveryValue)
+            changeHealthVible(entity , world:get(entity , health).health + Setting.AutoRecovery.AutoRecoveryValue)
         else
             
-            changeHealthVible(entity, Setting.Health.MaxHealth - world:get(entity , traumaDamages))
+            changeHealthVible(entity, Setting.Health.MaxHealth - t.traumaDamage)
         end
     end
-
     world:set(entity , recovery , task.delay(Setting.AutoRecovery.AutoRecoveryTime , _recovery , entity))
 end
 
--- local function Run(self)
---     local this = self.this
-
---     for i=1 , math.huge do
---         if world:get(this , Events).Events[i] then
---             if typeof(_this.Event[i].Event) == "function" then
---                 _this.Event[i].Event( table.unpack( _this.Event[i].Pras ) )
---                 Datas[self.player.Name].Event[i] = nil
---             end
---         else
---             return
---         end
---     end
--- end
-
+local healthmanager = {}
+healthmanager.__index = healthmanager
+--// $ main
 
 function healthmanager.new()
-    local playerHealth = world:entity()
-    world:set(playerHealth , healths , Setting.Health.BaseHealth)
-    world:set(playerHealth , maxHealths , Setting.Health.MaxHealth)
-    world:set(playerHealth , traumaDamages , Setting.Health.BaseTraumaDamage)
-    world:set(playerHealth , human , {dead=false})
-    world:set(playerHealth , Events , {})
-    world:set(playerHealth , Running , false)
-    world:set(playerHealth , healths , Setting.Health.BaseHealth)
+    local player = world:entity()
+    world:set(player , health , {
+        health=Setting.Health.BaseHealth;
+        maxHealth=Setting.Health.MaxHealth;
+        traumaDamage=Setting.Health.BaseTraumaDamage;
+    });
+    world:set(player , case , {AutoRecovery = true;});
 
-    print(world:get(playerHealth , healths))
-    print(world:get(playerHealth , maxHealths))
-    print(world:get(playerHealth , traumaDamages))
-    print(world:get(playerHealth , human))
-    print(world:get(playerHealth , Events))
-    print(world:get(playerHealth , Running))
+    RunningLists[player] = {
+        Running = false;
+    };
 
-    world:set(playerHealth , recovery , task.delay(Setting.AutoRecovery.AutoRecoveryTime , _recovery , playerHealth))
+    --// recovery
+    task.defer(_recovery , player)
 
-    local this = setmetatable({
-        Health = world:get(playerHealth , healths);
-        MaxHealths = world:get(playerHealth , maxHealths);
-        TraumaDamages = world:get(playerHealth , traumaDamages);
-        human = world:get(playerHealth , human);
-        this = playerHealth;
+    --// metatable
+    local self = setmetatable({
+        health = world:get(player , health).health;
+        maxHealth = world:get(player , health).maxHealth;
+        traumaDamage = world:get(player , health).traumaDamage;
+        player = player;
     } , healthmanager);
 
     RunService.Heartbeat:Connect(function(deltaTime)
-        this.Health = world:get(playerHealth , healths);
-        this.MaxHealths = world:get(playerHealth , maxHealths);
-        this.TraumaDamages = world:get(playerHealth , traumaDamages);
-        this.human = world:get(playerHealth , human);
+        self.health = world:get(player , health).health;
+        self.maxHealth = world:get(player , health).maxHealth;
+        self.traumaDamage = world:get(player , health).traumaDamage;
     end)
 
-    return this
+    return self
 end
 
-function healthmanager.takeDamege(self , Damege)
-    assert(type(Damege) == 'number' , 'Damege is not number')
-    local this = self.this
-    world:set(this , Events , table.insert(world:get(this , Events) , function(player:Player , Damege:number)
-        changeHealthVible(this , world:get(this , healths)::number - Damege)
-    end))
-    -- Run(this)
-end
+function healthmanager.takeDamege(self , Damage)
+    local player = self.player :: number & {
+        __nominal_type_dont_use: any
+    };
 
+    local health = world:get(player , health) :: {
+        health: number;
+        maxHealth: number;
+        traumaDamage: number;
+    };
+
+
+    local function main(self , Damage)
+        local player = self.player :: number & {
+            __nominal_type_dont_use: any
+        };
+        changeHealthVible(player , health.health - Damage)
+    end
+
+    run(self , main , {self , Damage})
+end
 
 return healthmanager

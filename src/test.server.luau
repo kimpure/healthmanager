@@ -17,9 +17,9 @@ local HealthManager = require(script.Parent)
 -- end)
 
 Players.PlayerAdded:Connect(function(player)
-    local this = HealthManager.new()
-    this:takeDamege(10)
+    local NewManager = HealthManager.new()
     while wait(.1) do
-        print(this.Health)
+        NewManager:takeDamege(10)
+        print(NewManager.health)
     end
 end)
