@@ -3,6 +3,7 @@ name = "kimpure/healthmanager"
 version = "0.0.1"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
+license="AGPL-3.0"
 
 [dependencies]
 jecs = "ukendio/jecs@0.2.2"
